@@ -27,27 +27,43 @@
                 radial-gradient(circle at 70% 80%, var(--ball-color) 0%, #000 150%);
             box-shadow: inset -5px -5px 20px rgba(0,0,0,0.4), 0 0 10px var(--ball-color);
         }
+        /* --- UI Elements Styling --- */
+        .instructions, .controls-panel {
+            transition: opacity 0.4s ease, transform 0.4s ease; /* Smooth fade/slide transition */
+        }
         .instructions { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.5); padding: 10px 20px; border-radius: 10px; text-align: center; z-index: 10; }
-        #fullscreen-btn { display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 12px 24px; font-size: 16px; font-weight: bold; color: #fff; background-color: rgba(0, 170, 255, 0.7); border: none; border-radius: 30px; cursor: pointer; backdrop-filter: blur(5px); }
         .controls-panel {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 12px;
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            z-index: 20;
-            backdrop-filter: blur(5px);
-            border: 1px solid #444;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.6); padding: 15px; border-radius: 12px;
+            display: flex; gap: 20px; align-items: center;
+            z-index: 20; backdrop-filter: blur(5px); border: 1px solid #444;
         }
         .control-group { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .control-group label { font-size: 14px; white-space: nowrap; }
         input[type="range"] { width: 100px; }
         input[type="color"] { width: 40px; height: 25px; border: none; background: none; padding: 0; border-radius: 5px; }
+        
+        /* --- UI Toggle Button --- */
+        #toggle-ui-btn {
+            position: absolute; top: 15px; right: 15px;
+            z-index: 30; width: 40px; height: 40px;
+            background: rgba(0, 0, 0, 0.5); border: 1px solid #444;
+            color: #fff; font-size: 24px; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        
+        /* --- Class to Hide UI Elements --- */
+        .ui-hidden {
+            opacity: 0;
+            pointer-events: none; /* Prevents interaction with hidden elements */
+            transform: translateX(-50%) translateY(20px); /* Slight slide down effect */
+        }
+        /* Special transform for instructions to keep it centered */
+        .instructions.ui-hidden {
+             transform: translateX(-50%) translateY(-20px);
+        }
+
+        #fullscreen-btn { display: none; /* Other styling is the same */ position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 20; padding: 12px 24px; font-size: 16px; font-weight: bold; color: #fff; background-color: rgba(0, 170, 255, 0.7); border: none; border-radius: 30px; cursor: pointer; backdrop-filter: blur(5px); }
         @media (max-width: 1023px) {
             .controls-panel { flex-direction: column; bottom: 80px; }
             #fullscreen-btn { display: block; }
@@ -55,6 +71,7 @@
     </style>
 </head>
 <body>
+    <button id="toggle-ui-btn">⚙️</button>
     <div class="instructions"><h2>Eye Exercise</h2><p>Relax and follow the balls with your eyes.</p></div>
     <div id="vr-container">
         <div class="eye-section"><div class="ball" id="left-ball"></div></div>
@@ -64,57 +81,73 @@
     <div class="controls-panel">
         <div class="control-group"><label for="speed-slider">Speed</label><input type="range" id="speed-slider" min="1" max="10" value="4"></div>
         <div class="control-group"><label for="size-slider">Size</label><input type="range" id="size-slider" min="20" max="100" value="60"></div>
+        <div class="control-group"><label for="depth-slider">Depth</label><input type="range" id="depth-slider" min="20" max="100" value="40"></div>
         <div class="control-group"><label for="color-picker">Color</label><input type="color" id="color-picker" value="#00aaff"></div>
     </div>
     <button id="fullscreen-btn">Go Fullscreen</button>
 
     <script>
+        // --- Get All Elements ---
         const leftBall = document.getElementById('left-ball');
         const rightBall = document.getElementById('right-ball');
         const speedSlider = document.getElementById('speed-slider');
         const sizeSlider = document.getElementById('size-slider');
+        const depthSlider = document.getElementById('depth-slider'); // New slider
         const colorPicker = document.getElementById('color-picker');
         const docElement = document.documentElement;
+        // UI Hiding Elements
+        const toggleUiBtn = document.getElementById('toggle-ui-btn');
+        const controlsPanel = document.querySelector('.controls-panel');
+        const instructions = document.querySelector('.instructions');
 
+        // --- Control Variables ---
         let animationDuration = 7000;
         let baseSize = 60; 
-        const MIN_SIZE_SCALE = 0.4; // Ball shrinks to 40% of its base size
+        let minSizeScale = 0.4; // Controlled by depth slider now
         let startTime = null;
 
+        // --- Update Functions for Controls ---
         function updateSpeed() { animationDuration = 11000 - (parseInt(speedSlider.value) * 1000); }
         function updateSize() { baseSize = parseInt(sizeSlider.value); }
         function updateColor() { docElement.style.setProperty('--ball-color', colorPicker.value); }
+        function updateDepth() { 
+            // Convert slider value (20-100) to a decimal (0.2-1.0)
+            minSizeScale = parseInt(depthSlider.value) / 100;
+        }
         
-        updateSpeed(); updateSize(); updateColor();
+        // --- Initialize all values on load ---
+        updateSpeed(); updateSize(); updateColor(); updateDepth();
         
+        // --- Event Listeners for Controls ---
         speedSlider.addEventListener('input', updateSpeed);
         sizeSlider.addEventListener('input', updateSize);
         colorPicker.addEventListener('input', updateColor);
+        depthSlider.addEventListener('input', updateDepth); // New listener
 
+        // --- Event Listener for UI Toggle ---
+        toggleUiBtn.addEventListener('click', () => {
+            controlsPanel.classList.toggle('ui-hidden');
+            instructions.classList.toggle('ui-hidden');
+        });
+
+        // --- Main Animation Loop ---
         function animate(timestamp) {
             if (!startTime) startTime = timestamp;
-            
-            // To start in the middle, we offset the elapsed time by a quarter cycle
             const timeOffset = animationDuration / 4;
             const elapsedTime = timestamp - startTime + timeOffset;
 
-            // --- MOVEMENT LOGIC (Unchanged) ---
-            // This creates the left-to-right-to-left movement
+            // Movement Logic
             const moveCycleProgress = (elapsedTime % animationDuration) / animationDuration;
             const movementFactor = (1 - Math.cos(moveCycleProgress * 2 * Math.PI)) / 2;
             const percentX = movementFactor * 100;
 
-            // --- CORRECTED SIZING LOGIC ---
-            // We use a simple sine wave for the size. It naturally creates one "pulse"
-            // per full animation cycle, perfectly matching the movement.
+            // Sizing Logic
             const sizeCycleProgress = (elapsedTime % animationDuration) / animationDuration;
             const sizeFactor = Math.sin(sizeCycleProgress * Math.PI);
-
-            // Calculate the current size based on the sine wave (sizeFactor from 0 to 1)
-            const sizeRange = baseSize - (baseSize * MIN_SIZE_SCALE);
-            const currentSize = (baseSize * MIN_SIZE_SCALE) + (sizeFactor * sizeRange);
+            const sizeRange = baseSize - (baseSize * minSizeScale); // Uses variable now
+            const currentSize = (baseSize * minSizeScale) + (sizeFactor * sizeRange);
             
-            // --- APPLY STYLES ---
+            // Apply Styles
             const balls = [leftBall, rightBall];
             balls.forEach(ball => {
                 ball.style.width = `${currentSize}px`;
@@ -127,6 +160,7 @@
             requestAnimationFrame(animate);
         }
 
+        // --- Fullscreen Logic ---
         const fullscreenBtn = document.getElementById('fullscreen-btn');
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) { docElement.requestFullscreen?.(); } 
