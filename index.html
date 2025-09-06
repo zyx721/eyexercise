@@ -99,8 +99,8 @@
         let minSizeScale = 0.4;
         let startTime = null;
 
-        // MODIFIED: Increased from 25 to 40 for a shorter travel distance
-        const TRAVEL_MIN_PERCENT = 40; // Farthest point
+        // MODIFIED: Increased from 60 to 75 for an extremely short, focused movement.
+        const TRAVEL_MIN_PERCENT = 75; // Farthest point
         const TRAVEL_MAX_PERCENT = 90; // Closest point
 
         function updateSpeed() { animationDuration = 11000 - (parseInt(speedSlider.value) * 1000); }
