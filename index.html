@@ -99,9 +99,9 @@
         let minSizeScale = 0.4;
         let startTime = null;
 
-        // MODIFIED: Increased from 60 to 75 for an extremely short, focused movement.
-        const TRAVEL_MIN_PERCENT = 75; // Farthest point
-        const TRAVEL_MAX_PERCENT = 90; // Closest point
+        // MODIFIED: Increased from 25 to 50 for an earlier reversal point
+        const TRAVEL_MIN_PERCENT = 50; // Farthest point
+        const TRAVEL_MAX_PERCENT = 75; // Closest point (Kept the same as your version)
 
         function updateSpeed() { animationDuration = 11000 - (parseInt(speedSlider.value) * 1000); }
         function updateSize() { baseSize = parseInt(sizeSlider.value); }
@@ -126,7 +126,7 @@
             const elapsedTime = timestamp - startTime + timeOffset;
 
             const moveCycleProgress = (elapsedTime % animationDuration) / animationDuration;
-            const movementFactor = (1 - Math.cos(moveCycleProgress * 2 * Math.PI)) / 2;
+            const movementFactor = (1 - Math.cos(moveCycleProgress * 2 * Math.PI)) / 2; 
 
             const travelRange = TRAVEL_MAX_PERCENT - TRAVEL_MIN_PERCENT;
             const percentX = TRAVEL_MIN_PERCENT + (movementFactor * travelRange);
