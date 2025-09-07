@@ -34,8 +34,8 @@
         .controls-panel {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
             background-color: rgba(0, 0, 0, 0.6); padding: 15px; border-radius: 12px;
-            display: flex; gap: 20px; align-items: center;
-            z-index: 20; backdrop-filter: blur(5px); border: 1px solid #444;
+            display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; align-items: center;
+            z-index: 20; backdrop-filter: blur(5px); border: 1px solid #444; max-width: 90%;
         }
         .control-group { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .control-group label { font-size: 14px; white-space: nowrap; }
@@ -78,6 +78,8 @@
         <div class="control-group"><label for="speed-slider">Speed</label><input type="range" id="speed-slider" min="1" max="10" value="4"></div>
         <div class="control-group"><label for="size-slider">Size</label><input type="range" id="size-slider" min="20" max="100" value="60"></div>
         <div class="control-group"><label for="depth-slider">Depth</label><input type="range" id="depth-slider" min="20" max="100" value="40"></div>
+        <!-- NEW: Slider for controlling the closest point -->
+        <div class="control-group"><label for="focus-slider">Focus</label><input type="range" id="focus-slider" min="0" max="100" value="80"></div>
         <div class="control-group"><label for="range-slider">Range</label><input type="range" id="range-slider" min="0" max="100" value="50"></div>
         <div class="control-group"><label for="color-picker">Color</label><input type="color" id="color-picker" value="#00aaff"></div>
     </div>
@@ -89,6 +91,7 @@
         const speedSlider = document.getElementById('speed-slider');
         const sizeSlider = document.getElementById('size-slider');
         const depthSlider = document.getElementById('depth-slider');
+        const focusSlider = document.getElementById('focus-slider'); // New element
         const rangeSlider = document.getElementById('range-slider');
         const colorPicker = document.getElementById('color-picker');
         const docElement = document.documentElement;
@@ -101,32 +104,45 @@
         let minSizeScale = 0.4;
         let startTime = null;
 
-        let travelMinPercent; // The "farthest" point - this will be controlled by the slider
-        const TRAVEL_MAX_PERCENT = 90; // The "closest" point is now a fixed anchor point.
+        let travelMinPercent; // Farthest point
+        let travelMaxPercent; // Closest point
 
         function updateSpeed() { animationDuration = 11000 - (parseInt(speedSlider.value) * 1000); }
         function updateSize() { baseSize = parseInt(sizeSlider.value); }
         function updateColor() { docElement.style.setProperty('--ball-color', colorPicker.value); }
         function updateDepth() { minSizeScale = parseInt(depthSlider.value) / 100; }
         
-        // --- CORRECTED: Function to update travel range ---
+        // NEW: Function to set the "closest" point
+        function updateFocus() {
+            const focusValue = parseInt(focusSlider.value); // 0 to 100
+            // Map 0-100 to a 50%-95% range. This is the closest point.
+            travelMaxPercent = 50 + (focusValue / 100) * 45;
+            // IMPORTANT: After updating the focus, we must also update the range
+            updateRange();
+        }
+
+        // MODIFIED: Function to set the "farthest" point based on the focus
         function updateRange() {
             const rangeValue = parseInt(rangeSlider.value); // 0 to 100
             
-            // At 0 range, the travel distance is 0. At 100 range, it's 80 (from 90 down to 10).
-            const travelDistance = 80 * (rangeValue / 100);
+            // The maximum distance the ball can travel is from its focus point to the edge (e.g., 5%)
+            const maxTravelDistance = travelMaxPercent - 5;
+            const travelDistance = maxTravelDistance * (rangeValue / 100);
 
             // The farthest point is the closest point minus the calculated travel distance.
-            travelMinPercent = TRAVEL_MAX_PERCENT - travelDistance;
+            travelMinPercent = travelMaxPercent - travelDistance;
         }
         
-        updateSpeed(); updateSize(); updateColor(); updateDepth(); updateRange();
+        // Initialize all values on load
+        updateSpeed(); updateSize(); updateColor(); updateDepth(); updateFocus(); // updateFocus will call updateRange
         
+        // Event Listeners for Controls
         speedSlider.addEventListener('input', updateSpeed);
         sizeSlider.addEventListener('input', updateSize);
         colorPicker.addEventListener('input', updateColor);
         depthSlider.addEventListener('input', updateDepth);
         rangeSlider.addEventListener('input', updateRange);
+        focusSlider.addEventListener('input', updateFocus); // New listener
 
         toggleUiBtn.addEventListener('click', () => {
             controlsPanel.classList.toggle('ui-hidden');
@@ -141,8 +157,7 @@
             const moveCycleProgress = (elapsedTime % animationDuration) / animationDuration;
             const movementFactor = (1 - Math.cos(moveCycleProgress * 2 * Math.PI)) / 2;
 
-            // This logic now works correctly with the updated range values
-            const travelRange = TRAVEL_MAX_PERCENT - travelMinPercent;
+            const travelRange = travelMaxPercent - travelMinPercent;
             const percentX = travelMinPercent + (movementFactor * travelRange);
 
             const sizeFactor = movementFactor;
