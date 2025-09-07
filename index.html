@@ -78,6 +78,7 @@
         <div class="control-group"><label for="speed-slider">Speed</label><input type="range" id="speed-slider" min="1" max="10" value="4"></div>
         <div class="control-group"><label for="size-slider">Size</label><input type="range" id="size-slider" min="20" max="100" value="60"></div>
         <div class="control-group"><label for="depth-slider">Depth</label><input type="range" id="depth-slider" min="20" max="100" value="40"></div>
+        <div class="control-group"><label for="range-slider">Range</label><input type="range" id="range-slider" min="0" max="100" value="50"></div>
         <div class="control-group"><label for="color-picker">Color</label><input type="color" id="color-picker" value="#00aaff"></div>
     </div>
     <button id="fullscreen-btn">Go Fullscreen</button>
@@ -88,6 +89,7 @@
         const speedSlider = document.getElementById('speed-slider');
         const sizeSlider = document.getElementById('size-slider');
         const depthSlider = document.getElementById('depth-slider');
+        const rangeSlider = document.getElementById('range-slider');
         const colorPicker = document.getElementById('color-picker');
         const docElement = document.documentElement;
         const toggleUiBtn = document.getElementById('toggle-ui-btn');
@@ -99,21 +101,32 @@
         let minSizeScale = 0.4;
         let startTime = null;
 
-        // MODIFIED: Increased from 25 to 50 for an earlier reversal point
-        const TRAVEL_MIN_PERCENT = 50; // Farthest point
-        const TRAVEL_MAX_PERCENT = 75; // Closest point (Kept the same as your version)
+        let travelMinPercent; // The "farthest" point - this will be controlled by the slider
+        const TRAVEL_MAX_PERCENT = 90; // The "closest" point is now a fixed anchor point.
 
         function updateSpeed() { animationDuration = 11000 - (parseInt(speedSlider.value) * 1000); }
         function updateSize() { baseSize = parseInt(sizeSlider.value); }
         function updateColor() { docElement.style.setProperty('--ball-color', colorPicker.value); }
         function updateDepth() { minSizeScale = parseInt(depthSlider.value) / 100; }
         
-        updateSpeed(); updateSize(); updateColor(); updateDepth();
+        // --- CORRECTED: Function to update travel range ---
+        function updateRange() {
+            const rangeValue = parseInt(rangeSlider.value); // 0 to 100
+            
+            // At 0 range, the travel distance is 0. At 100 range, it's 80 (from 90 down to 10).
+            const travelDistance = 80 * (rangeValue / 100);
+
+            // The farthest point is the closest point minus the calculated travel distance.
+            travelMinPercent = TRAVEL_MAX_PERCENT - travelDistance;
+        }
+        
+        updateSpeed(); updateSize(); updateColor(); updateDepth(); updateRange();
         
         speedSlider.addEventListener('input', updateSpeed);
         sizeSlider.addEventListener('input', updateSize);
         colorPicker.addEventListener('input', updateColor);
         depthSlider.addEventListener('input', updateDepth);
+        rangeSlider.addEventListener('input', updateRange);
 
         toggleUiBtn.addEventListener('click', () => {
             controlsPanel.classList.toggle('ui-hidden');
@@ -126,10 +139,11 @@
             const elapsedTime = timestamp - startTime + timeOffset;
 
             const moveCycleProgress = (elapsedTime % animationDuration) / animationDuration;
-            const movementFactor = (1 - Math.cos(moveCycleProgress * 2 * Math.PI)) / 2; 
+            const movementFactor = (1 - Math.cos(moveCycleProgress * 2 * Math.PI)) / 2;
 
-            const travelRange = TRAVEL_MAX_PERCENT - TRAVEL_MIN_PERCENT;
-            const percentX = TRAVEL_MIN_PERCENT + (movementFactor * travelRange);
+            // This logic now works correctly with the updated range values
+            const travelRange = TRAVEL_MAX_PERCENT - travelMinPercent;
+            const percentX = travelMinPercent + (movementFactor * travelRange);
 
             const sizeFactor = movementFactor;
             const sizeRange = baseSize - (baseSize * minSizeScale);
